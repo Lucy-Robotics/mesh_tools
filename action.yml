@@ -1,0 +1,31 @@
+name: Robot GLB meshes
+description: Write the compressed GLBs beside each robot mesh, then commit them or fail when they are stale
+inputs:
+  path:
+    description: Folder to convert
+    default: .
+  commit:
+    description: Commit and push the regenerated GLBs instead of failing
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
+    - shell: bash
+      run: npm ci --prefix "$GITHUB_ACTION_PATH" --no-audit --no-fund
+    - shell: bash
+      run: node "$GITHUB_ACTION_PATH/src/cli.ts" "${{ inputs.path }}"
+    - shell: bash
+      working-directory: ${{ inputs.path }}
+      run: |
+        git add -A -- '*.glb'
+        git diff --cached --quiet && exit 0
+        if [ "${{ inputs.commit }}" != true ]; then
+          git diff --cached --stat
+          echo "::error::GLB meshes are stale: run mesh_tools on this repo and commit them"
+          exit 1
+        fi
+        git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "chore(meshes): regenerate the GLB meshes"
+        git push
