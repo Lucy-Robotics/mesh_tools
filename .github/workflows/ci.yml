@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [dev, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm test
+
+  action:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - robot: so_arm101_urdf
+            ref: 5d90fee78d5ddba0a1923f6e54d8102623c75b0a
+          - robot: inmoov_urdf
+            ref: 29ebe5f81903c8f780ea7e286c326601c843de5d
+          - robot: inmoov_i2_urdf
+            ref: 865ac665b3e26667c5d28df0ba3787b9e0e9564c
+    name: action (${{ matrix.robot }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Lucy-Robotics/${{ matrix.robot }}
+          ref: ${{ matrix.ref }}
+          path: robot
+      - uses: ./
+        with:
+          path: robot
